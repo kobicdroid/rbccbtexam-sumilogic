@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RUBY SPRINGFIELD COLLEGE - CBT PORTAL</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #003366; --gold: #FFD700; --bg: #f4f7f9;
+            --success: #28a745; --danger: #d9534f; --text: #333;
+            --tag-color: #ff9800;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); color: var(--text); user-select: none; overflow-x: hidden; }
+
+        /* --- WATERMARK ADDED HERE --- */
+        .sumi-brand-footer {
+            position: fixed;
+            bottom: 20px;
+            right: 25px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50px;
+            font-size: 11px;
+            color: #555;
+            z-index: 999999;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .sumi-brand-footer strong {
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 13px;
+        }
+        /* --------------------------- */
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
+        @keyframes scaleCheck { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+        .page { display: none; min-height: 100vh; width: 100%; position: absolute; }
+        .btn { padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+
+        /* HELP MODAL STYLES */
+        #help-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 30000; }
+        .help-card { background: white; width: 90%; max-width: 500px; padding: 30px; border-radius: 15px; position: relative; animation: fadeInUp 0.4s; }
+        .help-close { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; font-weight: bold; color: var(--danger); }
+        .legend-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 0.9rem; }
+        .dot { width: 20px; height: 20px; border-radius: 3px; border: 1px solid #ccc; }
+
+        #fab-help { position: fixed; bottom: 85px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: var(--gold); color: var(--primary); border: 3px solid var(--primary); font-size: 24px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 10000; display: none; }
+
+        #submit-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 51, 102, 0.95); color: white; z-index: 20000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+
+        #login-page { display: flex; align-items: center; justify-content: center; background: var(--primary); }
+        .login-card { background: white; padding: 40px; border-radius: 12px; width: 90%; max-width: 450px; text-align: center; border-top: 8px solid var(--gold); }
+        .logo-box { width: 80px; height: 80px; background: #eee; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+
+        #conn-status { font-size: 0.75rem; margin-top: 10px; padding: 5px; border-radius: 4px; display: none; font-weight: bold; }
+        .status-online { color: var(--success); background: #e8f5e9; }
+        .status-offline { color: var(--danger); background: #ffebee; }
+        .status-checking { color: var(--primary); background: #e3f2fd; }
+
+        #instructions-page { background: #eef2f7; display: none; align-items: center; justify-content: center; }
+        .instr-container { background: white; max-width: 700px; width: 95%; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: fadeInUp 0.6s ease-out; }
+        .instr-header { background: var(--primary); color: white; padding: 25px; text-align: center; }
+        .subject-list-container { margin: 20px 0; padding: 0; list-style: none; text-align: left; }
+        .subject-item { padding: 10px 15px; margin-bottom: 8px; background: #f8f9fa; border-left: 5px solid var(--gold); border-radius: 4px; display: flex; justify-content: space-between; align-items: center; opacity: 0; animation: fadeInUp 0.5s forwards; }
+        .status-pill { font-size: 0.7rem; padding: 3px 8px; border-radius: 10px; background: var(--success); color: white; font-weight: bold; }
+
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, var(--primary) 0%, #001a33 100%); color: white; z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+        .security-box { margin-top: 30px; max-width: 500px; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; border: 1px solid var(--gold); font-size: 0.9rem; }
+
+        #exam-page { display: none; flex-direction: column; height: 100vh; background: linear-gradient(135deg, #fdfdfd 0%, #eef2f7 50%, #e0e6ed 100%); }
+        .info-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 40px; background: rgba(255, 255, 255, 0.9); border-bottom: 2px solid #ddd; }
+        #content-wrapper { display: flex; flex-grow: 1; padding: 20px; gap: 20px; overflow-y: auto; justify-content: center; }
+        #passage-box { flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; overflow-y: auto; display: none; max-height: 70vh; line-height: 1.7; font-size: 1.05rem; }
+        #question-box { flex: 1; max-width: 800px; }
+        .q-text { font-size: 1.15rem; line-height: 1.5; margin-bottom: 20px; font-weight: 500; color: #222; }
+        .option-item { padding: 12px; border: 1px solid #ddd; margin: 8px 0; border-radius: 5px; cursor: pointer; transition: 0.2s; background: #fdfdfd; }
+        .option-item:hover { background: #f0f7ff; border-color: var(--primary); }
+        .bottom-nav { background: #f8f9fa; border-top: 1px solid #ddd; padding: 15px 40px; }
+        .control-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: center; }
+        
+        #calc-box { position: fixed; top: 20%; right: 50px; width: 240px; background: #222; border-radius: 10px; padding: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); display: none; z-index: 2000; }
+        #calc-header { padding: 5px; cursor: move; background: #444; margin: -15px -15px 10px -15px; border-radius: 10px 10px 0 0; text-align: center; color: #aaa; font-size: 0.7rem; font-weight: bold; }
+        .calc-screen { width: 100%; height: 45px; background: #111; color: #0f0; text-align: right; padding: 10px; font-family: monospace; font-size: 1.2rem; margin-bottom: 10px; border-radius: 5px; box-sizing: border-box; }
+        .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        .calc-keys button { padding: 10px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; }
+        .num-key { background: #444; color: white; }
+        .op-key { background: var(--primary); color: white; }
+        
+        #confirm-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 10001; }
+        .modal-card { background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; animation: fadeInUp 0.3s; }
+        
+        #result-page { background: var(--bg); display: none; align-items: center; justify-content: center; }
+        .receipt-card { background: white; padding: 40px; border-radius: 15px; width: 90%; max-width: 550px; animation: fadeInUp 0.5s; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 8px solid var(--success); }
+        .summary-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        
+        #final-page { background: white; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100vh; }
+        .finish-logo { width: 100px; height: 100px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; animation: scaleCheck 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .finish-logo::after { content: '✓'; color: white; font-size: 60px; font-weight: bold; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div class="sumi-brand-footer">
+    <span>Powered by</span>
+    <strong>SumiLogic</strong>
+</div>
+
+<div id="help-modal">
+    <div class="help-card">
+        <span class="help-close" onclick="closeHelp()">&times;</span>
+        <h3 style="color: var(--primary); margin-top: 0;">Exam Navigation Guide</h3>
+        <p style="font-size: 0.9rem; color: #666;">Use the following legend to track your progress:</p>
+        
+        <div class="legend-item"><div class="dot" style="background: var(--success);"></div> <span><b>Green:</b> Question Answered & Saved</span></div>
+        <div class="legend-item"><div class="dot" style="background: var(--tag-color);"></div> <span><b>Orange:</b> Question Tagged / Skipped</span></div>
+        <div class="legend-item"><div class="dot" style="background: white; border: 1px solid #ccc;"></div> <span><b>White:</b> Question Not Yet Visited</span></div>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+        <ul style="font-size: 0.85rem; padding-left: 20px; line-height: 1.6;">
+            <li>Click <b>SAVE & NEXT</b> to move to the next question.</li>
+            <li>Click the <b>QUESTION NUMBER</b> in the grid to jump directly to it.</li>
+            <li>The exam <b>AUTO-SUBMITS</b> when the timer hits zero.</li>
+        </ul>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="closeHelp()">GOT IT, CONTINUE</button>
+    </div>
+</div>
+
+<button id="fab-help" onclick="openHelp()" title="Help Guide">?</button>
+
+<div id="submit-loader">
+    <div style="font-size: 1.5rem; animation: pulse 1.5s infinite;">Finalizing Examination...</div>
+    <div style="margin-top: 10px; color: var(--gold);">Uploading data to secure server</div>
+</div>
+
+<div id="loading-overlay">
+    <div id="loading-spinner" style="font-size: 2rem; animation: pulse 2s infinite;">Initializing Security Protocols...</div>
+    <div id="load-subjects-top" style="margin-top:15px; color: var(--gold); font-weight: bold;"></div>
+    <div class="security-box">
+        <h4 style="color: var(--gold); text-transform: uppercase;">Professional Conduct & Malpractice</h4>
+        <ul style="text-align: left; line-height: 1.6;">
+            <li>This session is strictly monitored. Tab switching is logged.</li>
+            <li>Ensure all external materials are removed from your desk.</li>
+            <li>Malpractice will lead to immediate disqualification.</li>
+        </ul>
+    </div>
+</div>
+
+<div id="login-page" class="page" style="display:flex;">
+    <div class="login-card">
+        <div class="logo-box"><img src="https://cdn-icons-png.flaticon.com/512/3062/3062314.png" width="50"></div>
+        <h2 style="margin:0; color:var(--primary)">RUBY SPRINGFIELD COLLEGE</h2>
+        <h4 id="portal-title" style="margin: 5px 0 25px 0; color: #777; letter-spacing: 1px;">OFFICIAL CBT EXAM PORTAL</h4>
+        
+        <div id="auth-fields">
+            <input type="text" id="cand-name" placeholder="Full Name (Surname First)">
+            <input type="text" id="cand-reg" placeholder="Registration Number">
+            <select id="cand-dept" onchange="toggleElectives()">
+                <option value="">-- Select Department --</option>
+                <option value="SCIENCE HEALTH">SCIENCE (HEALTH)</option>
+                <option value="SCIENCE ENGINEERING">SCIENCE (ENGINEERING)</option>
+                <option value="HUMANITY">HUMANITY</option>
+                <option value="COMMERCIAL">COMMERCIAL</option>
+            </select>
+            <div id="elective-box" style="display:none;">
+                <label id="elective-label" style="font-size: 0.8rem; color: var(--primary); font-weight: bold; display: block; text-align: left; margin-top: 5px;">Choose your 4th Subject:</label>
+                <select id="cand-elective"></select>
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-top: 10px;" onclick="handleLogin()">AUTHENTICATE</button>
+            <div id="conn-status"></div>
+            <p style="margin-top:20px; font-size:0.9rem;">Already written? <a href="javascript:void(0)" onclick="toggleResultMode(true)" style="color:var(--primary); font-weight:bold; text-decoration:none;">Check Result Slip</a></p>
+        </div>
+
+        <div id="result-fields" style="display:none; animation: fadeInUp 0.4s;">
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">Enter your Registration Number to access your authorized result slip.</p>
+            <input type="text" id="check-reg" placeholder="Registration Number" style="border: 2px solid var(--success);">
+            <button class="btn" style="background:var(--success); color:white; width:100%; margin-top: 10px;" onclick="directToResult()">ACCESS RESULT SLIP</button>
+            <p style="margin-top:20px; font-size:0.9rem;"><a href="javascript:void(0)" onclick="toggleResultMode(false)" style="color:var(--text); text-decoration:none;">Back to Exam Login</a></p>
+        </div>
+    </div>
+</div>
+
+<div id="instructions-page" class="page">
+    <div class="instr-container">
+        <div class="instr-header"><h2 style="margin:0;">PRE-EXAM BRIEFING</h2></div>
+        <div class="instr-body" style="padding: 30px;">
+            <p><strong>Candidate:</strong> <span id="instr-name"></span></p>
+            <p><strong>Reg Number:</strong> <span id="instr-reg" style="color:var(--primary); font-weight:bold;"></span></p>
+            <p style="font-size: 0.9rem; color: #666;">Synchronizing registered subjects with central database...</p>
+            <div id="subject-list-ui" class="subject-list-container"></div>
+            <div id="sync-status" style="margin-top: 15px; padding: 10px; background: #fff8e1; border-radius: 8px; border: 1px solid #ffe082;">
+                <p id="sync-text" style="margin: 0; font-size: 0.85rem; color: #856404; text-align: center;">Please wait for all subjects to load...</p>
+            </div>
+            <button id="start-btn" class="btn btn-primary" style="width:100%; background:var(--success); display: none; margin-top: 15px;" onclick="startExam()">START EXAM</button>
+        </div>
+    </div>
+</div>
+
+<div id="exam-page" class="page">
+    <div class="exam-header-top" style="padding: 15px 0 5px 0; background: white; text-align: center;">
+        <h2 style="margin:0; color:var(--primary); font-size: 1.4rem; letter-spacing: 1px;">RUBY SPRINGFIELD COLLEGE</h2>
+    </div>
+    <div class="info-bar" id="exam-info-bar">
+        <div><small style="color: #888; font-weight: bold; display: block;">CANDIDATE</small><span id="disp-name" style="font-weight: 700; color: var(--primary);"></span></div>
+        <div><small style="color: #888; font-weight: bold; display: block;">TIME REMAINING</small><span id="timer" style="font-weight: 900; color: var(--danger); font-size: 1.2rem; font-family: monospace;">02:00:00</span></div>
+    </div>
+    <div id="sub-tabs" style="display:flex; background:#f0f0f0; border-bottom:1px solid #ccc; flex-wrap: wrap;"></div>
+    
+    <div id="content-wrapper">
+        <div id="passage-box"></div>
+        <div id="question-box">
+            <div id="q-text" class="q-text"></div>
+            <div id="options-box"></div>
+        </div>
+    </div>
+
+    <div id="calc-box">
+        <div id="calc-header">DRAG TO MOVE</div>
+        <div class="calc-screen" id="calc-display">0</div>
+        <div class="calc-keys">
+            <button class="num-key" onclick="cIn('7')">7</button><button class="num-key" onclick="cIn('8')">8</button><button class="num-key" onclick="cIn('9')">9</button><button class="op-key" onclick="cIn('/')">÷</button>
+            <button class="num-key" onclick="cIn('4')">4</button><button class="num-key" onclick="cIn('5')">5</button><button class="num-key" onclick="cIn('6')">6</button><button class="op-key" onclick="cIn('*')">×</button>
+            <button class="num-key" onclick="cIn('1')">1</button><button class="num-key" onclick="cIn('2')">2</button><button class="num-key" onclick="cIn('3')">3</button><button class="op-key" onclick="cIn('-')">-</button>
+            <button class="op-key" style="background:var(--danger);" onclick="cCl()">C</button><button class="num-key" onclick="cIn('0')">0</button><button class="op-key" onclick="cIn('.')">.</button><button class="op-key" onclick="cIn('+')">+</button>
+            <button class="op-key" style="grid-column: span 4; background:var(--success);" onclick="cEv()">=</button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div id="q-grid" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:15px;"></div>
+        <div class="control-group">
+            <button class="btn" style="background:#ddd;" onclick="prevQ()">PREVIOUS</button>
+            <button class="btn" style="background:var(--tag-color); color:white;" onclick="tagQuestion()">TAG / SKIP</button>
+            <button class="btn btn-primary" onclick="nextQ()">SAVE & NEXT</button>
+            <button class="btn" style="background:var(--gold); color:var(--primary);" onclick="tCalc()">🖩 CALCULATOR</button>
+            <button class="btn" style="background:var(--danger); color:white;" onclick="showConfirm()">FINISH & SUBMIT</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirm-modal">
+    <div class="modal-card">
+        <h3>Final Submission</h3>
+        <p>Are you sure you want to end your examination?</p>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+            <button class="btn" style="background:#ddd;" onclick="hideConfirm()">REVIEW</button>
+            <button id="final-submit-btn" class="btn" style="background:var(--success); color:white;" onclick="submitFinal()">CONFIRM SUBMIT</button>
+        </div>
+    </div>
+</div>
+
+<div id="result-page" class="page">
+    <div class="receipt-card">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" width="60">
+        </div>
+        <h2 style="color:var(--success); text-align:center; margin-top:0;">EXAMINATION COMPLETED</h2>
+        <p style="text-align:center; color:#555;">The system has successfully captured your response. Your attempt summary is as follows:</p>
+        
+        <div id="attempt-summary" style="margin-top:25px; border-top: 2px solid #eee;"></div>
+        
+        <div style="background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-top: 20px; font-size: 0.85rem; color: #666; text-align: center;">
+            Official scores are currently being verified and will be released by the administration.
+        </div>
+        
+        <button class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="goToFinal()">SECURELY PROCEED</button>
+    </div>
+</div>
+
+<div id="final-page" class="page">
+    <div class="finish-logo"></div>
+    <h1 style="color: var(--primary); margin: 0;">SUCCESSFULLY SUBMITTED</h1>
+    <p style="color: #666; max-width: 450px; margin: 15px 0 30px 0;">
+        Student: <strong id="final-cand-name" style="color: #333;"></strong><br>
+        Reg No: <strong id="final-cand-reg" style="color: var(--primary);"></strong>
+    </p>
+    
+    <div id="auth-status-msg" style="margin-bottom: 20px; font-weight: bold; font-size: 0.9rem;"></div>
+
+    <div style="display:flex; gap:10px; flex-direction:column; align-items:center;">
+        <button id="print-btn" class="btn" style="background: var(--success); color: white; width: 250px;" onclick="checkAuthorizationAndPrint()">
+            🖨️ CHECK & PRINT RESULT
+        </button>
+        <button class="btn" style="background: #333; color: white; width: 250px;" onclick="location.reload()">LOGOUT</button>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpWdupPDKJ1GfISfXPIyeKiqgCcFOBu9JZ9ejuz3nyE5daqjbCz_kpJjUwOBVOXlJj-w/exec";
+    
+    window.addEventListener('load', async () => {
+        const statusBox = document.getElementById('conn-status');
+        statusBox.style.display = "block";
+        statusBox.innerText = "● PINGING SERVER...";
+        statusBox.className = "status-checking";
+
+        try {
+            const res = await fetch(SCRIPT_URL + "?action=verify&reg=PING&t=" + Date.now());
+            const data = await res.json();
+            if(data.status === "online" || data.status === "success") {
+                statusBox.innerText = "● SERVER CONNECTED (ONLINE)";
+                statusBox.className = "status-online";
+            }
+        } catch (e) {
+            statusBox.innerText = "● CONNECTION FAILED: Check internet or Script Deployment";
+            statusBox.className = "status-offline";
+        }
+    });
+
+    const baseDeptMap = { 
+        "SCIENCE HEALTH": ["Use of English", "Physics", "Chemistry", "Biology"], 
+        "SCIENCE ENGINEERING": ["Use of English", "Physics", "Chemistry", "Mathematics"], 
+        "HUMANITY": ["Use of English", "Government", "Literature"], 
+        "COMMERCIAL": ["Use of English", "Accounting", "Mathematics"] 
+    };
+
+    let examData = {}, currentSub = "", currentIndex = 0, userAnswers = {}, timeLeft = 120 * 60, isLive = false;
+    let taggedQuestions = {}, tabSwitchCount = 0; 
+    let candDept = ""; 
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden && isLive) {
+            tabSwitchCount++;
+            alert(`SECURITY WARNING #${tabSwitchCount}: Please do not switch tabs. All actions are logged.`);
+            if(tabSwitchCount >= 3) {
+                alert("CRITICAL VIOLATION: The exam will now auto-submit.");
+                submitFinal();
+            }
+        }
+    });
+
+    function toggleResultMode(isResult) {
+        const authFields = document.getElementById('auth-fields');
+        const resultFields = document.getElementById('result-fields');
+        const title = document.getElementById('portal-title');
+
+        if (isResult) {
+            authFields.style.display = 'none';
+            resultFields.style.display = 'block';
+            title.innerText = "RESULT CHECKING PORTAL";
+            title.style.color = "var(--success)";
+        } else {
+            authFields.style.display = 'block';
+            resultFields.style.display = 'none';
+            title.innerText = "OFFICIAL CBT EXAM PORTAL";
+            title.style.color = "#777";
+        }
+    }
+
+    function directToResult() {
+        const reg = document.getElementById('check-reg').value.trim();
+        if (!reg) return alert("Please enter your Registration Number");
+        document.getElementById('final-cand-name').innerText = "Verifying...";
+        document.getElementById('final-cand-reg').innerText = reg.toUpperCase();
+        document.getElementById('login-page').style.display = 'none';
+        document.getElementById('final-page').style.display = 'flex';
+        checkAuthorizationAndPrint();
+    }
+
+    async function checkAuthorizationAndPrint() {
+        const reg = document.getElementById('final-cand-reg').innerText.toUpperCase().trim();
+        const btn = document.getElementById('print-btn');
+        const msg = document.getElementById('auth-status-msg');
+        btn.innerText = "Verifying Authorization...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(`${SCRIPT_URL}?action=checkAuth&reg=${encodeURIComponent(reg)}`);
+            const result = await response.json();
+            
+            if (result.status === "Authorized") {
+                msg.style.color = "var(--success)";
+                msg.innerText = "Authorized! Generating PDF...";
+                document.getElementById('final-cand-name').innerText = result.data.name;
+                let cleanScores = result.data.scores;
+                if (typeof cleanScores === 'string') { try { cleanScores = JSON.parse(cleanScores); } catch(e) {} }
+                generateProfessionalPDF({ ...result.data, scores: cleanScores });
+                btn.innerText = "RE-PRINT RESULT SLIP";
+            } else if (result.status === "Unauthorized") {
+                msg.style.color = "var(--danger)";
+                msg.innerText = "NOTICE: Your result has not been authorized for release yet.";
+                btn.innerText = "CHECK & PRINT RESULT";
+            } else {
+                msg.style.color = "var(--danger)";
+                msg.innerText = "Registration record not found.";
+                btn.innerText = "CHECK & PRINT RESULT";
+            }
+        } catch (e) {
+            msg.innerText = "Connection Error. Check deployment settings.";
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function generateProfessionalPDF(studentData) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFillColor(0, 51, 102); 
+        doc.rect(0, 0, 210, 45, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.text("RUBY SPRINGFIELD COLLEGE", 105, 25, { align: "center" });
+        doc.setFontSize(10);
+        doc.text("OFFICIAL EXAMINATION RESULT SLIP", 105, 35, { align: "center" });
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(11);
+        doc.text(`CANDIDATE NAME: ${studentData.name.toUpperCase()}`, 15, 60);
+        doc.text(`REGISTRATION NO: ${studentData.reg}`, 15, 68);
+        doc.text(`DEPARTMENT: ${studentData.dept}`, 15, 76);
+        doc.text(`DATE ISSUED: ${new Date().toLocaleDateString()}`, 150, 60);
+        const tableData = Object.entries(studentData.scores).map(([sub, score]) => [sub, score]);
+        tableData.push([{ content: 'AGGREGATE SCORE', styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }, { content: studentData.total, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]);
+        doc.autoTable({ startY: 85, head: [['SUBJECT', 'SCORE (%)']], body: tableData, theme: 'striped', headStyles: { fillColor: [0, 51, 102] } });
+        doc.save(`Result_${studentData.reg}.pdf`);
+    }
+
+    function saveProgress() {
+        if (!isLive) return;
+        const state = { userAnswers, taggedQuestions, timeLeft, currentSub, currentIndex, reg: document.getElementById('cand-reg').value.trim().toUpperCase(), dept: candDept };
+        localStorage.setItem("cbt_recovery_" + state.reg, JSON.stringify(state));
+    }
+
+    function checkRecovery(reg) {
+        const saved = localStorage.getItem("cbt_recovery_" + reg.toUpperCase().trim());
+        return saved ? JSON.parse(saved) : null;
+    }
+
+    window.onbeforeunload = function() { if (isLive) return "Exam in progress!"; };
+    function openHelp() { document.getElementById('help-modal').style.display = 'flex'; }
+    function closeHelp() { document.getElementById('help-modal').style.display = 'none'; }
+    function hideConfirm() { document.getElementById('confirm-modal').style.display = 'none'; }
+    function showConfirm() { document.getElementById('confirm-modal').style.display = 'flex'; }
+    function shuffle(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } return array; }
+
+    function toggleElectives() {
+        const dept = document.getElementById('cand-dept').value;
+        const box = document.getElementById('elective-box');
+        const sel = document.getElementById('cand-elective');
+        if(dept === "HUMANITY") { 
+            box.style.display = 'block'; 
+            sel.innerHTML = '<option value="">-- Select 4th Subject --</option><option value="IRK">IRK</option><option value="CRS">CRS</option><option value="Economics">Economics</option>'; 
+        } else if(dept === "COMMERCIAL") { 
+            box.style.display = 'block'; 
+            sel.innerHTML = '<option value="">-- Select 4th Subject --</option><option value="Commerce">Commerce</option><option value="History">History</option>'; 
+        } else { box.style.display = 'none'; }
+    }
+
+    async function handleLogin() {
+        const nameInput = document.getElementById('cand-name').value.trim();
+        const reg = document.getElementById('cand-reg').value.trim().toUpperCase();
+        const dept = document.getElementById('cand-dept').value;
+        const elective = document.getElementById('cand-elective').value;
+        
+        if(!nameInput || !reg || !dept) return alert("Please enter all details");
+        candDept = dept; 
+
+        document.getElementById('loading-overlay').style.display = 'flex';
+        document.getElementById('load-subjects-top').innerText = "Authenticating Registration...";
+
+        try {
+            const authCheck = await fetch(`${SCRIPT_URL}?action=verify&reg=${encodeURIComponent(reg)}`);
+            const authStatus = await authCheck.json();
+            
+            if (authStatus.status === "error") {
+                document.getElementById('loading-overlay').style.display = 'none';
+                return alert("ACCESS DENIED: " + authStatus.message);
+            }
+
+            const dbName = authStatus.name;
+            let subs = [...baseDeptMap[dept]];
+            if(elective) subs.push(elective);
+
+            const recoveryData = checkRecovery(reg);
+            examData = {}; 
+
+            const promises = subs.map(s => 
+                fetch(`${SCRIPT_URL}?subject=${encodeURIComponent(s.toLowerCase().trim())}`)
+                .then(res => res.json())
+                .then(data => {
+                    examData[s] = recoveryData ? data : shuffle([...data]);
+                    userAnswers[s] = recoveryData ? (recoveryData.userAnswers[s] || new Array(examData[s].length).fill(null)) : new Array(examData[s].length).fill(null);
+                    taggedQuestions[s] = recoveryData ? (recoveryData.taggedQuestions[s] || new Array(examData[s].length).fill(false)) : new Array(examData[s].length).fill(false);
+                })
+            );
+
+            await Promise.all(promises);
+            if(recoveryData) { timeLeft = recoveryData.timeLeft; currentSub = recoveryData.currentSub; currentIndex = recoveryData.currentIndex; }
+
+            document.getElementById('instr-name').innerText = dbName.toUpperCase();
+            document.getElementById('instr-reg').innerText = reg;
+            document.getElementById('disp-name').innerText = dbName.toUpperCase();
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('instructions-page').style.display = 'flex';
+            
+            const listUI = document.getElementById('subject-list-ui');
+            listUI.innerHTML = "";
+            subs.forEach((s) => {
+                const item = document.createElement('li'); item.className = 'subject-item';
+                item.innerHTML = `<span>${s}</span><span class="status-pill">LOADED ✓</span>`;
+                listUI.appendChild(item);
+            });
+            document.getElementById('start-btn').style.display = "block"; 
+
+        } catch(e) { 
+            document.getElementById('loading-overlay').style.display = 'none';
+            alert("LOAD ERROR: Script did not respond. Check your internet or ensure Script is deployed to 'Anyone'.");
+        }
+    }
+
+    function startExam() { 
+        isLive = true; 
+        document.getElementById('instructions-page').style.display = 'none'; 
+        document.getElementById('exam-page').style.display = 'flex'; 
+        document.getElementById('fab-help').style.display = 'block'; 
+        const tabs = document.getElementById('sub-tabs');
+        tabs.innerHTML = "";
+        Object.keys(examData).forEach(s => {
+            const t = document.createElement('div'); t.innerText = s;
+            t.style.padding = "12px 20px"; t.style.cursor = "pointer"; t.style.fontWeight = "bold";
+            t.onclick = () => switchSub(s); tabs.appendChild(t);
+        });
+        if(!currentSub) currentSub = Object.keys(examData)[0];
+        switchSub(currentSub); 
+        startTimer(); 
+    }
+
+    function switchSub(s) { 
+        currentSub = s; currentIndex = 0; 
+        document.querySelectorAll('#sub-tabs div').forEach(t => t.style.borderBottom = (t.innerText === s) ? "3px solid var(--primary)" : "none");
+        loadQ(); renderGrid(); 
+    }
+
+    function loadQ() {
+        const q = examData[currentSub][currentIndex]; 
+        const passageBox = document.getElementById('passage-box');
+        if (q.passage && q.passage.trim() !== "") {
+            passageBox.innerHTML = `<strong>PASSAGE:</strong><br>${q.passage}`;
+            passageBox.style.display = 'block';
+        } else { passageBox.style.display = 'none'; }
+        document.getElementById('q-text').innerText = `(${currentIndex + 1}) ${q.q}`;
+        const box = document.getElementById('options-box'); box.innerHTML = '';
+        ['a','b','c','d'].forEach(opt => {
+            const isSelected = userAnswers[currentSub][currentIndex] === opt.toUpperCase();
+            const div = document.createElement('div'); div.className = 'option-item';
+            if(isSelected) { div.style.borderColor = 'var(--primary)'; div.style.background = '#f0f7ff'; }
+            div.innerHTML = `<input type="radio" ${isSelected ? 'checked' : ''}> ${q[opt]}`;
+            div.onclick = () => { userAnswers[currentSub][currentIndex] = opt.toUpperCase(); taggedQuestions[currentSub][currentIndex] = false; saveProgress(); renderGrid(); loadQ(); };
+            box.appendChild(div);
+        });
+    }
+
+    function renderGrid() {
+        const g = document.getElementById('q-grid'); g.innerHTML = '';
+        examData[currentSub].forEach((_, i) => {
+            const b = document.createElement('div'); b.style.width="30px"; b.style.height="30px"; b.style.display="flex"; b.style.alignItems="center"; b.style.justifyContent="center"; b.style.cursor="pointer"; b.style.border="1px solid #ccc";
+            if (taggedQuestions[currentSub][i]) { b.style.background = "var(--tag-color)"; b.style.color = "white"; }
+            else if (userAnswers[currentSub][i]) { b.style.background = "var(--success)"; b.style.color = "white"; }
+            else { b.style.background = "white"; }
+            b.innerText = i+1; b.onclick = () => { currentIndex = i; loadQ(); }; g.appendChild(b);
+        });
+    }
+
+    function nextQ() { if(currentIndex < examData[currentSub].length -1) { currentIndex++; loadQ(); renderGrid(); saveProgress(); } }
+    function prevQ() { if(currentIndex > 0) { currentIndex--; loadQ(); renderGrid(); saveProgress(); } }
+    function tagQuestion() { taggedQuestions[currentSub][currentIndex] = true; saveProgress(); nextQ(); }
+
+    function startTimer() { 
+        setInterval(() => { 
+            if(!isLive || timeLeft <= 0) return; 
+            timeLeft--; 
+            if(timeLeft % 10 === 0) saveProgress(); 
+            let h = Math.floor(timeLeft / 3600), m = Math.floor((timeLeft % 3600) / 60), s = timeLeft % 60;
+            document.getElementById('timer').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            if(timeLeft === 0) submitFinal();
+        }, 1000); 
+    }
+
+    async function submitFinal() {
+        isLive = false;
+        const reg = document.getElementById('cand-reg').value.trim().toUpperCase();
+        document.getElementById('confirm-modal').style.display = 'none';
+        document.getElementById('submit-loader').style.display = 'flex';
+        let finalScores = {}, aggregateTotal = 0, summaryHtml = "<h4>ATTEMPT SUMMARY:</h4>";
+        Object.keys(examData).forEach(subject => {
+            let correct = 0, attempted = 0;
+            examData[subject].forEach((q, idx) => {
+                if (userAnswers[subject][idx]) attempted++;
+                if (userAnswers[subject][idx] === (q.ans||"").toString().trim().toUpperCase()) correct++;
+            });
+            let scaled = Math.round((correct / examData[subject].length) * 100);
+            finalScores[subject] = scaled; aggregateTotal += scaled;
+            summaryHtml += `<div class="summary-row"><span>${subject}</span><span>${attempted}/${examData[subject].length}</span></div>`;
+        });
+        const payload = {
+            name: document.getElementById('disp-name').innerText,
+            reg: reg, dept: candDept, scores: finalScores, total: aggregateTotal,
+            cheated: tabSwitchCount > 0 ? `Yes (${tabSwitchCount})` : "No"
+        };
+        try {
+            await fetch(SCRIPT_URL, { 
+                method: "POST", 
+                mode: "no-cors", 
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(payload) 
+            });
+            localStorage.removeItem("cbt_recovery_" + reg);
+            document.getElementById('submit-loader').style.display = 'none';
+            document.getElementById('exam-page').style.display = 'none';
+            document.getElementById('result-page').style.display = 'flex';
+            document.getElementById('attempt-summary').innerHTML = summaryHtml;
+        } catch(e) { 
+            alert("SUBMISSION ERROR: Please check internet connection."); 
+            document.getElementById('submit-loader').style.display = 'none';
+            document.getElementById('confirm-modal').style.display = 'flex';
+        }
+    }
+
+    function goToFinal() {
+        document.getElementById('result-page').style.display = 'none';
+        document.getElementById('final-page').style.display = 'flex';
+        document.getElementById('final-cand-name').innerText = document.getElementById('disp-name').innerText;
+        document.getElementById('final-cand-reg').innerText = document.getElementById('cand-reg').value.toUpperCase().trim();
+    }
+
+    dragElement(document.getElementById("calc-box"));
+    function dragElement(e){var n=0,t=0,o=0,l=0;function r(e){(e=e||window.event).preventDefault();o=e.clientX;l=e.clientY;document.onmouseup=u;document.onmousemove=i}function i(r){(r=r||window.event).preventDefault();n=o-r.clientX;t=l-r.clientY;o=r.clientX;l=r.clientY;e.style.top=e.offsetTop-t+"px";e.style.left=e.offsetLeft-n+"px"}function u(){document.onmouseup=null;document.onmousemove=null}document.getElementById(e.id+"-header")?document.getElementById(e.id+"-header").onmousedown=r:e.onmousedown=r}
+    let cV = "";
+    function tCalc() { const b = document.getElementById('calc-box'); b.style.display = (b.style.display==='block')?'none':'block'; }
+    function cIn(v) { cV += v; document.getElementById('calc-display').innerText = cV; }
+    function cCl() { cV = ""; document.getElementById('calc-display').innerText = "0"; }
+    function cEv() { try { cV = eval(cV).toString(); document.getElementById('calc-display').innerText = cV; } catch { cCl(); } }
+</script>
+</body>
+</html>
