@@ -16,7 +16,6 @@
 
         body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); color: var(--text); user-select: none; overflow-x: hidden; }
 
-        /* --- WATERMARK ADDED HERE --- */
         .sumi-brand-footer {
             position: fixed;
             bottom: 20px;
@@ -41,7 +40,6 @@
             font-weight: 800;
             font-size: 13px;
         }
-        /* --------------------------- */
 
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
@@ -51,7 +49,6 @@
         .btn { padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .btn-primary { background: var(--primary); color: white; }
 
-        /* HELP MODAL STYLES */
         #help-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 30000; }
         .help-card { background: white; width: 90%; max-width: 500px; padding: 30px; border-radius: 15px; position: relative; animation: fadeInUp 0.4s; }
         .help-close { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; font-weight: bold; color: var(--danger); }
@@ -186,8 +183,9 @@
         </div>
 
         <div id="result-fields" style="display:none; animation: fadeInUp 0.4s;">
-            <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">Enter your Registration Number to access your authorized result slip.</p>
-            <input type="text" id="check-reg" placeholder="Registration Number" style="border: 2px solid var(--success);">
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">Enter details to access your authorized result slip.</p>
+            <input type="text" id="check-reg" placeholder="Registration Number" style="border: 2px solid var(--primary);">
+            <input type="password" id="check-pin" placeholder="4-Digit Access PIN" maxlength="4" style="border: 2px solid var(--success);">
             <button class="btn" style="background:var(--success); color:white; width:100%; margin-top: 10px;" onclick="directToResult()">ACCESS RESULT SLIP</button>
             <p style="margin-top:20px; font-size:0.9rem;"><a href="javascript:void(0)" onclick="toggleResultMode(false)" style="color:var(--text); text-decoration:none;">Back to Exam Login</a></p>
         </div>
@@ -284,24 +282,28 @@
 <div id="final-page" class="page">
     <div class="finish-logo"></div>
     <h1 style="color: var(--primary); margin: 0;">SUCCESSFULLY SUBMITTED</h1>
-    <p style="color: #666; max-width: 450px; margin: 15px 0 30px 0;">
+    <p style="color: #666; max-width: 450px; margin: 15px 0 10px 0;">
         Student: <strong id="final-cand-name" style="color: #333;"></strong><br>
         Reg No: <strong id="final-cand-reg" style="color: var(--primary);"></strong>
     </p>
     
-    <div id="auth-status-msg" style="margin-bottom: 20px; font-weight: bold; font-size: 0.9rem;"></div>
+    <div id="auth-status-msg" style="width:90%; max-width:400px; margin-bottom: 20px;"></div>
 
     <div style="display:flex; gap:10px; flex-direction:column; align-items:center;">
         <button id="print-btn" class="btn" style="background: var(--success); color: white; width: 250px;" onclick="checkAuthorizationAndPrint()">
             🖨️ CHECK & PRINT RESULT
         </button>
-        <button class="btn" style="background: #333; color: white; width: 250px;" onclick="location.reload()">LOGOUT</button>
+        <button class="btn" style="background: #333; color: white; width: 250px;" onclick="handleLogout()">LOGOUT</button>
     </div>
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpWdupPDKJ1GfISfXPIyeKiqgCcFOBu9JZ9ejuz3nyE5daqjbCz_kpJjUwOBVOXlJj-w/exec";
+    // UPDATED SCRIPT URL
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdPUg0j87chS8GMICjMOMQALM1mAqDwTdjz-3lNF9oQ6P3SglNmaCzbJwexnbwS-_bCw/exec"; 
     
+    let CANDIDATE_PROFILE = { name: "", reg: "", dept: "" };
+    let tabSwitchCount = 0; 
+
     window.addEventListener('load', async () => {
         const statusBox = document.getElementById('conn-status');
         statusBox.style.display = "block";
@@ -329,19 +331,29 @@
     };
 
     let examData = {}, currentSub = "", currentIndex = 0, userAnswers = {}, timeLeft = 120 * 60, isLive = false;
-    let taggedQuestions = {}, tabSwitchCount = 0; 
+    let taggedQuestions = {}; 
     let candDept = ""; 
+    let serverGeneratedPin = "";
 
     document.addEventListener("visibilitychange", () => {
         if (document.hidden && isLive) {
             tabSwitchCount++;
-            alert(`SECURITY WARNING #${tabSwitchCount}: Please do not switch tabs. All actions are logged.`);
+            alert(`SECURITY WARNING #${tabSwitchCount}: Please do not leave the exam screen. This incident is being logged.`);
             if(tabSwitchCount >= 3) {
-                alert("CRITICAL VIOLATION: The exam will now auto-submit.");
+                alert("CRITICAL VIOLATION: Excessive tab switching detected. Automatic submission triggered.");
                 submitFinal();
             }
         }
     });
+
+    function handleLogout() {
+        if (confirm("Are you sure you want to logout? The session will be cleared.")) {
+            const reg = document.getElementById('cand-reg').value.trim().toUpperCase();
+            if(reg) localStorage.removeItem("cbt_recovery_" + reg);
+            tabSwitchCount = 0; 
+            window.location.reload();
+        }
+    }
 
     function toggleResultMode(isResult) {
         const authFields = document.getElementById('auth-fields');
@@ -363,9 +375,14 @@
 
     function directToResult() {
         const reg = document.getElementById('check-reg').value.trim();
-        if (!reg) return alert("Please enter your Registration Number");
-        document.getElementById('final-cand-name').innerText = "Verifying...";
-        document.getElementById('final-cand-reg').innerText = reg.toUpperCase();
+        const pin = document.getElementById('check-pin').value.trim();
+        if (!reg || !pin) return alert("Please enter both Registration Number and PIN");
+        
+        serverGeneratedPin = pin; 
+        CANDIDATE_PROFILE.reg = reg.toUpperCase();
+
+        document.getElementById('final-cand-name').innerText = "Verifying Credentials...";
+        document.getElementById('final-cand-reg').innerText = CANDIDATE_PROFILE.reg;
         document.getElementById('login-page').style.display = 'none';
         document.getElementById('final-page').style.display = 'flex';
         checkAuthorizationAndPrint();
@@ -373,34 +390,49 @@
 
     async function checkAuthorizationAndPrint() {
         const reg = document.getElementById('final-cand-reg').innerText.toUpperCase().trim();
+        const pin = serverGeneratedPin; 
         const btn = document.getElementById('print-btn');
         const msg = document.getElementById('auth-status-msg');
         btn.innerText = "Verifying Authorization...";
         btn.disabled = true;
 
         try {
-            const response = await fetch(`${SCRIPT_URL}?action=checkAuth&reg=${encodeURIComponent(reg)}`);
+            const response = await fetch(`${SCRIPT_URL}?action=checkAuth&reg=${encodeURIComponent(reg)}&pin=${encodeURIComponent(pin)}&t=${Date.now()}`);
             const result = await response.json();
             
             if (result.status === "Authorized") {
-                msg.style.color = "var(--success)";
-                msg.innerText = "Authorized! Generating PDF...";
-                document.getElementById('final-cand-name').innerText = result.data.name;
+                msg.innerHTML = `<span style="color:var(--success)">Authorized! Generating PDF...</span>`;
+                
+                CANDIDATE_PROFILE.name = result.data.name;
+                CANDIDATE_PROFILE.reg = result.data.reg;
+                document.getElementById('final-cand-name').innerText = CANDIDATE_PROFILE.name;
+                
                 let cleanScores = result.data.scores;
-                if (typeof cleanScores === 'string') { try { cleanScores = JSON.parse(cleanScores); } catch(e) {} }
-                generateProfessionalPDF({ ...result.data, scores: cleanScores });
+                if (typeof cleanScores === 'string') {
+                    try { cleanScores = JSON.parse(cleanScores); } catch(e) { cleanScores = {}; }
+                }
+                
+                generateProfessionalPDF({
+                    name: result.data.name,
+                    reg: result.data.reg,
+                    dept: result.data.dept,
+                    scores: cleanScores,
+                    total: result.data.total
+                });
+                
                 btn.innerText = "RE-PRINT RESULT SLIP";
+            } else if (result.status === "WrongPIN") {
+                msg.innerHTML = `<span style="color:var(--danger)">ERROR: Incorrect Security PIN. Access Denied.</span>`;
+                btn.innerText = "RE-TRY ACCESS";
             } else if (result.status === "Unauthorized") {
-                msg.style.color = "var(--danger)";
-                msg.innerText = "NOTICE: Your result has not been authorized for release yet.";
-                btn.innerText = "CHECK & PRINT RESULT";
+                msg.innerHTML = `<span style="color:var(--tag-color)">NOTICE: Your result has not been authorized for release yet.</span>`;
+                btn.innerText = "RE-CHECK STATUS";
             } else {
-                msg.style.color = "var(--danger)";
-                msg.innerText = "Registration record not found.";
+                msg.innerHTML = `<span style="color:var(--danger)">Registration record not found.</span>`;
                 btn.innerText = "CHECK & PRINT RESULT";
             }
         } catch (e) {
-            msg.innerText = "Connection Error. Check deployment settings.";
+            msg.innerText = "Connection Error. Check internet or deployment.";
         } finally {
             btn.disabled = false;
         }
@@ -409,29 +441,87 @@
     function generateProfessionalPDF(studentData) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+
         doc.setFillColor(0, 51, 102); 
-        doc.rect(0, 0, 210, 45, 'F');
+        doc.rect(5, 5, pageWidth - 10, 45, 'F');
+        
+        doc.setTextColor(230, 230, 230);
+        doc.setFontSize(50);
+        doc.setFont("helvetica", "bold");
+        doc.text(studentData.dept.toUpperCase(), pageWidth / 2, 160, { align: "center", angle: 45, opacity: 0.1 });
+
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(22);
-        doc.text("RUBY SPRINGFIELD COLLEGE", 105, 25, { align: "center" });
+        doc.setFontSize(24);
+        doc.setFont("helvetica", "bold");
+        doc.text("RUBY SPRINGFIELD COLLEGE", pageWidth / 2, 25, { align: "center" });
         doc.setFontSize(10);
-        doc.text("OFFICIAL EXAMINATION RESULT SLIP", 105, 35, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.text("OFFICIAL COMPUTER BASED TEST (CBT) RESULT SLIP", pageWidth / 2, 38, { align: "center" });
+
         doc.setTextColor(40, 40, 40);
         doc.setFontSize(11);
-        doc.text(`CANDIDATE NAME: ${studentData.name.toUpperCase()}`, 15, 60);
-        doc.text(`REGISTRATION NO: ${studentData.reg}`, 15, 68);
-        doc.text(`DEPARTMENT: ${studentData.dept}`, 15, 76);
-        doc.text(`DATE ISSUED: ${new Date().toLocaleDateString()}`, 150, 60);
-        const tableData = Object.entries(studentData.scores).map(([sub, score]) => [sub, score]);
-        tableData.push([{ content: 'AGGREGATE SCORE', styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }, { content: studentData.total, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]);
-        doc.autoTable({ startY: 85, head: [['SUBJECT', 'SCORE (%)']], body: tableData, theme: 'striped', headStyles: { fillColor: [0, 51, 102] } });
+        doc.setFont("helvetica", "bold");
+        doc.text("CANDIDATE PROFILE", 15, 65);
+        doc.setLineWidth(0.5);
+        doc.line(15, 67, 70, 67);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(`FULL NAME:`, 15, 78);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${studentData.name.toUpperCase()}`, 60, 78);
+        
+        doc.setFont("helvetica", "normal");
+        doc.text(`REGISTRATION NO:`, 15, 86);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${studentData.reg}`, 60, 86);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(`DEPARTMENT:`, 15, 94);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${studentData.dept.toUpperCase()}`, 60, 94);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(`DATE ISSUED:`, 140, 78);
+        doc.text(`${new Date().toLocaleDateString()}`, 175, 78);
+
+        const tableBody = Object.entries(studentData.scores).map(([sub, score]) => [
+            sub.toUpperCase(), 
+            score,
+            score >= 50 ? "PASS" : "RE-SIT"
+        ]);
+
+        doc.autoTable({
+            startY: 105,
+            head: [['SUBJECT TITLE', 'SCORE', 'REMARK']],
+            body: tableBody,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 51, 102], textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { fontSize: 10, cellPadding: 5 },
+            columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' } },
+            foot: [[
+                { content: 'AGGREGATE TOTAL', colSpan: 1, styles: { fontStyle: 'bold' } },
+                { content: studentData.total, styles: { fontStyle: 'bold', halign: 'center' } },
+                { content: 'STATUS: CERTIFIED', styles: { fontStyle: 'bold', halign: 'center' } }
+            ]],
+            footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] }
+        });
+
+        const finalY = doc.lastAutoTable.finalY + 30;
+        doc.setDrawColor(0, 0, 0);
+        doc.line(20, finalY, 70, finalY);
+        doc.text("School Stamp", 35, finalY + 5);
+        
+        doc.line(140, finalY, 190, finalY);
+        doc.text("Registrar Signature", 145, finalY + 5);
+
         doc.save(`Result_${studentData.reg}.pdf`);
     }
 
     function saveProgress() {
         if (!isLive) return;
-        const state = { userAnswers, taggedQuestions, timeLeft, currentSub, currentIndex, reg: document.getElementById('cand-reg').value.trim().toUpperCase(), dept: candDept };
-        localStorage.setItem("cbt_recovery_" + state.reg, JSON.stringify(state));
+        const state = { userAnswers, taggedQuestions, timeLeft, currentSub, currentIndex, profile: CANDIDATE_PROFILE, tabSwitches: tabSwitchCount };
+        localStorage.setItem("cbt_recovery_" + CANDIDATE_PROFILE.reg, JSON.stringify(state));
     }
 
     function checkRecovery(reg) {
@@ -472,7 +562,7 @@
         document.getElementById('load-subjects-top').innerText = "Authenticating Registration...";
 
         try {
-            const authCheck = await fetch(`${SCRIPT_URL}?action=verify&reg=${encodeURIComponent(reg)}`);
+            const authCheck = await fetch(`${SCRIPT_URL}?action=verify&reg=${encodeURIComponent(reg)}&t=${Date.now()}`);
             const authStatus = await authCheck.json();
             
             if (authStatus.status === "error") {
@@ -480,15 +570,26 @@
                 return alert("ACCESS DENIED: " + authStatus.message);
             }
 
-            const dbName = authStatus.name;
+            if (authStatus.submitted === true) {
+                document.getElementById('loading-overlay').style.display = 'none';
+                alert("ACCESS DENIED: You have already completed this examination.");
+                toggleResultMode(true);
+                document.getElementById('check-reg').value = reg;
+                return;
+            }
+
+            CANDIDATE_PROFILE.name = authStatus.name.toUpperCase();
+            CANDIDATE_PROFILE.reg = reg;
+            CANDIDATE_PROFILE.dept = dept;
+
             let subs = [...baseDeptMap[dept]];
-            if(elective) subs.push(elective);
+            if(elective && elective !== "") subs.push(elective);
 
             const recoveryData = checkRecovery(reg);
             examData = {}; 
 
             const promises = subs.map(s => 
-                fetch(`${SCRIPT_URL}?subject=${encodeURIComponent(s.toLowerCase().trim())}`)
+                fetch(`${SCRIPT_URL}?subject=${encodeURIComponent(s.trim())}`)
                 .then(res => res.json())
                 .then(data => {
                     examData[s] = recoveryData ? data : shuffle([...data]);
@@ -498,11 +599,17 @@
             );
 
             await Promise.all(promises);
-            if(recoveryData) { timeLeft = recoveryData.timeLeft; currentSub = recoveryData.currentSub; currentIndex = recoveryData.currentIndex; }
+            if(recoveryData) { 
+                timeLeft = recoveryData.timeLeft; 
+                currentSub = recoveryData.currentSub; 
+                currentIndex = recoveryData.currentIndex;
+                tabSwitchCount = recoveryData.tabSwitches || 0;
+            }
 
-            document.getElementById('instr-name').innerText = dbName.toUpperCase();
-            document.getElementById('instr-reg').innerText = reg;
-            document.getElementById('disp-name').innerText = dbName.toUpperCase();
+            document.getElementById('instr-name').innerText = CANDIDATE_PROFILE.name;
+            document.getElementById('instr-reg').innerText = CANDIDATE_PROFILE.reg;
+            document.getElementById('disp-name').innerText = CANDIDATE_PROFILE.name;
+
             document.getElementById('loading-overlay').style.display = 'none';
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('instructions-page').style.display = 'flex';
@@ -517,8 +624,9 @@
             document.getElementById('start-btn').style.display = "block"; 
 
         } catch(e) { 
+            console.error(e);
             document.getElementById('loading-overlay').style.display = 'none';
-            alert("LOAD ERROR: Script did not respond. Check your internet or ensure Script is deployed to 'Anyone'.");
+            alert("CONNECTION ERROR: The server did not respond.");
         }
     }
 
@@ -592,10 +700,10 @@
 
     async function submitFinal() {
         isLive = false;
-        const reg = document.getElementById('cand-reg').value.trim().toUpperCase();
         document.getElementById('confirm-modal').style.display = 'none';
         document.getElementById('submit-loader').style.display = 'flex';
         let finalScores = {}, aggregateTotal = 0, summaryHtml = "<h4>ATTEMPT SUMMARY:</h4>";
+        
         Object.keys(examData).forEach(subject => {
             let correct = 0, attempted = 0;
             examData[subject].forEach((q, idx) => {
@@ -603,38 +711,95 @@
                 if (userAnswers[subject][idx] === (q.ans||"").toString().trim().toUpperCase()) correct++;
             });
             let scaled = Math.round((correct / examData[subject].length) * 100);
-            finalScores[subject] = scaled; aggregateTotal += scaled;
+            finalScores[subject] = scaled; 
+            aggregateTotal += scaled;
             summaryHtml += `<div class="summary-row"><span>${subject}</span><span>${attempted}/${examData[subject].length}</span></div>`;
         });
+
         const payload = {
-            name: document.getElementById('disp-name').innerText,
-            reg: reg, dept: candDept, scores: finalScores, total: aggregateTotal,
-            cheated: tabSwitchCount > 0 ? `Yes (${tabSwitchCount})` : "No"
+            name: CANDIDATE_PROFILE.name,
+            reg: CANDIDATE_PROFILE.reg, 
+            dept: CANDIDATE_PROFILE.dept, 
+            scores: finalScores, 
+            total: aggregateTotal,
+            tabSwitches: tabSwitchCount 
         };
+
         try {
-            await fetch(SCRIPT_URL, { 
+            const response = await fetch(SCRIPT_URL, { 
                 method: "POST", 
-                mode: "no-cors", 
-                headers: { "Content-Type": "text/plain" },
                 body: JSON.stringify(payload) 
             });
-            localStorage.removeItem("cbt_recovery_" + reg);
+            
+            const result = await response.json();
+            serverGeneratedPin = result.pin;
+
+            localStorage.removeItem("cbt_recovery_" + CANDIDATE_PROFILE.reg);
             document.getElementById('submit-loader').style.display = 'none';
             document.getElementById('exam-page').style.display = 'none';
             document.getElementById('result-page').style.display = 'flex';
             document.getElementById('attempt-summary').innerHTML = summaryHtml;
         } catch(e) { 
-            alert("SUBMISSION ERROR: Please check internet connection."); 
+            alert("SUBMISSION ERROR. Please inform the supervisor."); 
             document.getElementById('submit-loader').style.display = 'none';
-            document.getElementById('confirm-modal').style.display = 'flex';
         }
     }
 
     function goToFinal() {
         document.getElementById('result-page').style.display = 'none';
         document.getElementById('final-page').style.display = 'flex';
-        document.getElementById('final-cand-name').innerText = document.getElementById('disp-name').innerText;
-        document.getElementById('final-cand-reg').innerText = document.getElementById('cand-reg').value.toUpperCase().trim();
+        
+        document.getElementById('final-cand-name').innerText = CANDIDATE_PROFILE.name;
+        document.getElementById('final-cand-reg').innerText = CANDIDATE_PROFILE.reg;
+
+        const pin = serverGeneratedPin || "####";
+        
+        const statusMsg = document.getElementById('auth-status-msg');
+        statusMsg.innerHTML = `
+            <div style="background: #e8f5e9; border: 2px solid #28a745; padding: 20px; border-radius: 12px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <p style="margin: 0; color: #2e7d32; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Result Access PIN</p>
+                <h2 id="pin-display" style="margin: 10px 0; color: #333; letter-spacing: 8px; font-size: 2.5rem;">${pin}</h2>
+                
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                    <button onclick="copyPinToClipboard('${pin}')" id="copy-btn" class="btn" style="background: #28a745; color: white; padding: 8px 15px; font-size: 0.8rem; border-radius: 5px;">
+                        📋 COPY PIN
+                    </button>
+                    <button onclick="downloadCredentials('${CANDIDATE_PROFILE.reg}', '${pin}')" class="btn" style="background: #003366; color: white; padding: 8px 15px; font-size: 0.8rem; border-radius: 5px;">
+                        💾 SAVE AS FILE
+                    </button>
+                </div>
+
+                <p style="margin-top: 15px; color: #666; font-size: 0.75rem; line-height: 1.4;">
+                    <strong>IMPORTANT:</strong> You need this PIN and your Reg No to access/print your result slip later.
+                </p>
+            </div>
+        `;
+        
+        copyPinToClipboard(pin, true);
+    }
+
+    function copyPinToClipboard(pin, silent = false) {
+        navigator.clipboard.writeText(pin).then(() => {
+            if (!silent) {
+                const btn = document.getElementById('copy-btn');
+                btn.innerHTML = "✅ COPIED!";
+                setTimeout(() => btn.innerHTML = "📋 COPY PIN", 2000);
+            }
+        });
+    }
+
+    function downloadCredentials(reg, pin) {
+        const text = `RUBY SPRINGFIELD COLLEGE - CBT PORTAL\n\n` +
+                     `STUDENT: ${CANDIDATE_PROFILE.name}\n` +
+                     `REG NO: ${reg}\n` +
+                     `ACCESS PIN: ${pin}\n\n` +
+                     `Use these credentials to access and print your result slip.`;
+        
+        const blob = new Blob([text], { type: 'text/plain' });
+        const anchor = document.createElement('a');
+        anchor.download = `CBT_Credentials_${reg}.txt`;
+        anchor.href = window.URL.createObjectURL(blob);
+        anchor.click();
     }
 
     dragElement(document.getElementById("calc-box"));
