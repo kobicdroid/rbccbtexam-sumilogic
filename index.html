@@ -7,6 +7,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
     <style>
         :root {
             --primary: #003366; --gold: #FFD700; --bg: #f4f7f9;
@@ -298,7 +313,6 @@
 </div>
 
 <script>
-    // UPDATED SCRIPT URL
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdPUg0j87chS8GMICjMOMQALM1mAqDwTdjz-3lNF9oQ6P3SglNmaCzbJwexnbwS-_bCw/exec"; 
     
     let CANDIDATE_PROFILE = { name: "", reg: "", dept: "" };
@@ -653,6 +667,7 @@
         loadQ(); renderGrid(); 
     }
 
+    // LOAD QUESTION WITH FORCED MATH RENDERING
     function loadQ() {
         const q = examData[currentSub][currentIndex]; 
         const passageBox = document.getElementById('passage-box');
@@ -660,16 +675,25 @@
             passageBox.innerHTML = `<strong>PASSAGE:</strong><br>${q.passage}`;
             passageBox.style.display = 'block';
         } else { passageBox.style.display = 'none'; }
-        document.getElementById('q-text').innerText = `(${currentIndex + 1}) ${q.q}`;
+        
+        document.getElementById('q-text').innerHTML = `(${currentIndex + 1}) ${q.q}`;
+        
         const box = document.getElementById('options-box'); box.innerHTML = '';
         ['a','b','c','d'].forEach(opt => {
             const isSelected = userAnswers[currentSub][currentIndex] === opt.toUpperCase();
             const div = document.createElement('div'); div.className = 'option-item';
             if(isSelected) { div.style.borderColor = 'var(--primary)'; div.style.background = '#f0f7ff'; }
+            
             div.innerHTML = `<input type="radio" ${isSelected ? 'checked' : ''}> ${q[opt]}`;
+            
             div.onclick = () => { userAnswers[currentSub][currentIndex] = opt.toUpperCase(); taggedQuestions[currentSub][currentIndex] = false; saveProgress(); renderGrid(); loadQ(); };
             box.appendChild(div);
         });
+        
+        // FORCED TYPESETTING CALL
+        if (window.MathJax && window.MathJax.typeset) {
+            MathJax.typeset();
+        }
     }
 
     function renderGrid() {
